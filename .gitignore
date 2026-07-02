@@ -1,0 +1,39 @@
+
+venv/
+.venv/
+env/
+ENV/
+
+
+data/
+*.csv
+*.json
+*.xlsx
+*.parquet
+
+# Caché 
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+
+
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Generated results (regenerable from scripts)
+results/*.csv
+results/*.json
+
+# Temporary archives
+*.zip
+
+# Generated results (regenerable from scripts)
+results/*.csv
+results/*.json
+
+# Temporary archives
+*.zip
