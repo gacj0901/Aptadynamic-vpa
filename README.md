@@ -5,304 +5,134 @@ Copyright © 2026 G.A.C.J.
 Released under the **GNU Affero General Public License v3.0 (AGPL-3.0)**
 
 ---
+Implementation of the PRAMA Protokol over Bonneville Power Administration
+transmission outage data. First empirical validation of the aptadynamic
+framework on a real-world domain.
 
-## Overview
-**Aptadynamic-VPA** is the reference implementation of the **PRAMA Protokol (Projection Protocol)** for evaluating the structural viability of electric transmission systems.
-Rather than modeling the physical mechanisms responsible for outages, PRAMA projects observable operational data into an abstract viability space where the historical evolution of structural degradation can be quantified independently of the underlying domain.
-This repository contains the first empirical validation of the Aptadynamic framework on real transmission outage datasets using **Bonneville Power Administration (BPA)** and **New York Independent System Operator (NYISO)** records.
-
----
-
-# Aptadynamic
-Aptadynamic is a theoretical framework for studying the **viability and structural persistence of complex systems under perturbation**.
-Its primary object is **the trajectory of viability**, not the instantaneous state of the system.
-Instead of asking
-
-> *What is the current state of the system?*
-
-Aptadynamic asks
-
-> *How is the system's capacity to remain structurally viable evolving through time?*
-
-The framework models historical accumulation, endogenous deformation of viability thresholds, structural margins, and latent degradation preceding observable collapse.
-
----
-
-# PRAMA Protokol (Projection Protocol)
-
-PRAMA Protokol is the operational protocol derived from Aptadynamic.
-It is intentionally **domain-independent**.
-PRAMA never models the internal physics, logic, semantics, or causal mechanisms of the observed system.
-It operates exclusively on observable data streams.
-Every application follows the same sequence:
+## Architecture
 
 ```
-Domain
-↓
-Observables Ω
-↓
-History H
-↓
-Projection
-↓
-Γ
-↓
-Regime Stratification
-↓
-Viability Assessment
+        O_D                     π
+Domain ────► Observables Ω ────► Γ(t) = (Δ, Ξ, λ, Θ, M, G) ────► Regime / Alerts
+      (domain-specific,       (fixed kernel,
+       strictly causal)        identical across domains)
 ```
 
-The only domain-specific component is the observable extraction stage.
-Everything downstream belongs to the protocol itself.
+The projection kernel π never models the phenomenon: no grid topology,
+propagation mechanism, or weather causation enters it. Only the observation
+operator O_D is domain-specific.
 
----
+## Projected magnitudes
 
-# Core Aptadynamic Coordinates
-The protocol projects the observed trajectory into the aptadynamic space
+| Magnitude | Definition | Role |
+|---|---|---|
+| Δ(t) | \|O − Ô\| / (Ô + 1), Ô = causal E[intensity \| hour, month] | Structural decoupling — never raw intensity |
+| Ξ(t) | ∫ K(t−τ) Δ(τ) dτ, exponential causal kernel | Non-Markovian tension accumulator |
+| λ(t) | eroded by accumulated excess (Ξ−Θ)⁺, bounded recovery that never erases Ξ | Historical permissivity |
+| Θ(λ) | strictly increasing in λ | Endogenous threshold, contracts with history |
+| M(t) | Θ(λ) − Ξ | Viability margin |
+| G(t) | D⁺M | Margin generation power |
 
-```
-Γ = (Δ, Ξ, λ, Θ, M, G)
-```
+**Latent collapse:** O(t) > 0 ∧ M ≥ 0 ∧ G < 0 — the system operates normally
+while consuming its margin. Regime stratification on the (M, G) plane:
+S₁ viable · S₂ tension · S₃ critical · S₄ collapse.
 
-where
+## Empirical Results
 
-### Δ(t)
-**Structural decoupling.**
-The normalized deviation between the current observation and its causal historical expectation.
+### BPA (1999–2017, 14,258 automatic outages)
 
-```
-Δ(t)=|O(t)-E[O│history]|/(E[O│history]+1)
-```
+- Zipf exponent of cascade sizes: α = 2.99 (external consistency check;
+  published reference ≈ 2.87). Never used as a calibration target.
+- Conditional severity: P(size ≥ 4 | cascade occurs) = 0.091 inside
+  latent-collapse periods vs 0.006 outside — **ratio 16.0**
+  (label-shuffle permutation, p < 0.001; null 95th percentile 1.16).
+- Causal Markovian baseline (trailing intensity, equal alert budget): 3.16.
+- Independence partition: latent-only periods retain P(size ≥ 4) = 0.081
+  vs 0.006 where neither signal is present (~13×).
+- Occurrence forecasting remains Markovian: the trailing-intensity baseline
+  outperforms the projection at all horizons (6–48 h).
 
-The expectation is computed exclusively from past observations.
+### NYISO (2008–2021, 9,600 forced outages)
 
-Δ therefore measures structural deviation rather than raw event intensity.
+- Initial negative result (ratio 0.55) traced to a degenerate Δ based on
+  raw intensity — a failure of the observation operator, not the kernel.
+- With Δ as genuine causal decoupling: **ratio 1.90**, above the permutation
+  null (95th percentile 1.26). Same kernel, unchanged.
 
----
-
-### Ξ(t)
-**Historical structural tension.**
-
-```
-Ξ(t)=∫K(t-τ)Δ(τ)dτ
-```
-
-A genuinely non-Markovian accumulation of historical decoupling.
-
----
-
-### λ(t)
-**Historical permissivity.**
-Represents the remaining operational capacity of the system.
-Historical tension erodes λ, while recovery is bounded and never erases accumulated history.
-
----
-
-### Θ(λ)
-**Endogenous viability threshold.**
-The admissible structural tension contracts as historical permissivity decreases.
-The threshold therefore evolves with the trajectory rather than remaining externally fixed.
-
----
-
-### M(t)
-**Viability margin.**
+## Pipeline
 
 ```
-M(t)=Θ(λ)-Ξ
+ingest → omega → projection → validation
 ```
 
-Positive values indicate remaining structural viability.
-Negative values indicate structural exhaustion.
+- **ingest**: outage records → canonical events; bus names anonymized by hash
+- **omega**: events → observables (intensity, load, severity; cascades by
+  1-hour gap) with no mechanism assumption
+- **projection**: Ω → Γ, stratification, latent-collapse detection
+- **validation**: conditional severity vs causal Markovian baseline;
+  α and H treated as data properties, never calibration targets
 
----
+## Data
 
-### G(t)
-**Structural generation power.**
+Data files are not distributed with this repository.
 
-```
-G(t)=D⁺M
-```
-The forward derivative of the viability margin.
-It measures whether structural viability is being generated or consumed.
+1. Obtain the cleaned BPA data (courtesy of Ian Dobson, Iowa State University):
+   `outagesBPA.txt` and its cleaning documentation `CFAREADBPA-10.pdf` from
+   https://iandobson.ece.iastate.edu/
+2. Place them in `data/dobson_bpa/` and export to CSV (Mathematica script
+   `export_bpa_to_csv.wls`, or equivalent).
+3. For NYISO: place `outagesNYISO.txt` in `data/dobson_nyiso/` and run
+   `python scripts/convert_nyiso_to_csv.py data/dobson_nyiso/outagesNYISO.txt data/dobson_nyiso/outagesNYISO.csv`
 
----
+Bus names are anonymized in every output. The analysis and any conclusions
+are strictly those of the authors and not of Bonneville Power Administration.
 
-# Latent Collapse
-PRAMA distinguishes observable functionality from structural viability.
-A system may continue operating while its viability margin is still positive but continuously deteriorating.
-This condition is defined as **latent collapse**.
-
-```
-M ≥ 0
-G < 0
-```
-Observable functionality persists despite ongoing structural degradation.
-This allows PRAMA to identify deteriorating trajectories before conventional failure indicators appear.
-
----
-
-# Regime Stratification
-The protocol partitions the aptadynamic space into four operational regimes.
+## Usage
 
 ```
-S₁  Stable
-S₂  Stress
-S₃  Critical
-S₄  Collapse
-```
-
-Regimes are defined over the geometry of the viability space rather than over domain-specific variables.
-Consequently, the same stratification framework applies across heterogeneous domains.
-
----
-
-# Pipeline
-
-```
-ingest
-↓
-omega
-↓
-history
-↓
-projection
-↓
-stratification
-↓
-validation
-```
-
-### ingest
-Raw outage records are transformed into canonical events.
-All bus names are anonymized by irreversible hashing.
-
-### omega
-Canonical events are converted into observable streams Ω.
-Current adapters include
-
-* intensity
-* load
-* severity
-
-No assumptions are made regarding outage mechanisms.
-
-### history
-Observations are accumulated into a causal historical representation.
-Only past observations contribute to the current historical state.
-
-### projection
-The historical state is projected into the aptadynamic coordinates
-
-```
-Γ=(Δ,Ξ,λ,Θ,M,G)
-```
-
-### stratification
-The projected trajectory is classified into structural viability regimes.
-
-### validation
-Predicted viability trajectories are compared against observed cascade behavior.
-Zipf exponents and Hurst coefficients are treated exclusively as properties of the data, never as calibration targets.
-
----
-
-# Empirical Results
-## Bonneville Power Administration (1999–2017)
-* Zipf exponent of cascade sizes:
-
-```
-α = 2.99
-```
-
-(reference: Dobson ≈ 2.87)
-* Large-cascade enrichment (12-hour horizon)
-
-```
-×1.90
-```
-
-* Circular permutation test preserving autocorrelation
-
-```
-p < 0.005
-```
-
-* Latent-collapse condition substantially increases the conditional probability of large cascades.
-* Combined causal structural decoupling achieves conditional enrichment ratios exceeding sixteen under the validated projection.
-
----
-
-## Independent Replication
-
-The protocol was independently evaluated on NYISO transmission outage data.
-An initial negative result was traced to a degenerate definition of structural decoupling based on raw intensity.
-After redefining Δ as **causal structural decoupling**, independent replication was obtained without modifying the aptadynamic kernel.
-This demonstrates that protocol performance depends primarily on the quality of the observable projection rather than on the electrical infrastructure itself.
-
----
-
-# Domain Independence
-
-PRAMA Protokol is not a power-system model.
-Power transmission constitutes only the first empirical domain.
-The protocol requires only
-
-```
-Domain
-↓
-Observable extraction
-↓
-History
-↓
-Projection
-
----
-
-# Usage
-
-```bash
 pip install -e .
 
-python scripts/run_pipeline.py <path-to-outages.csv>
-
-python scripts/sweep.py
-
-python scripts/permtest.py
-
-python scripts/latent_test.py
-
-python scripts/baseline_test.py
+python scripts/run_pipeline.py  data/dobson_bpa/outagesBPA.csv   # full pipeline
+python scripts/latent_test.py   data/dobson_bpa/outagesBPA.csv   # conditional severity + independence partition
+python scripts/baseline_test.py data/dobson_bpa/outagesBPA.csv   # horizon curve vs Markovian baseline
+python scripts/permtest.py      data/dobson_bpa/outagesBPA.csv   # permutation significance
+python scripts/sweep.py         data/dobson_bpa/outagesBPA.csv   # parameter sweep
 ```
 
----
+## Methodological discipline
 
-# Data
-Cleaned BPA outage data were kindly provided by **Dr. Ian Dobson**, Sandbulte Professor of Electrical and Computer Engineering, Iowa State University.
-Dataset files are **not distributed** with this repository.
-Bus names are anonymized in every generated output.
-The analysis and conclusions presented here are solely those of the authors and do not represent the views of Bonneville Power Administration.
+- All baselines strictly causal; a future-leaking baseline discovered
+  mid-analysis was corrected before any comparison was retained.
+- Negative results reported as found; no parameter reversal to force
+  conclusions.
+- Kernel parameters fixed across domains; per-domain diagnosis targets
+  O_D fidelity only.
 
----
+## Foundations
 
-# Current Status
-Implemented
+π implements the aptadynamic framework: a formal theory of structural
+viability generalizing Aubin viability theory with a genuine memory kernel
+and an endogenous, history-contracted threshold. Full axiomatization in the
+mathematical corpus (see the `aptadynamik` project root). Its conceptual
+origin is a published ontological work; none of it is required to run or
+extend this repository.
 
-* Domain-independent PRAMA Protokol
-* Historical causal projection
-* Structural viability coordinates
-* Regime stratification
-* Latent-collapse detection
-* BPA empirical validation
-* NYISO independent replication
+## Acknowledgments
 
-Ongoing development
+Cleaned BPA outage data and NYISO data courtesy of Ian Dobson (Iowa State
+University), whose foundational work on cascading failure statistics made
+this validation possible:
 
-* Universal protocol specification
-* Generalized embedding formulation
-* Cross-domain adapters
-* LLM viability experiments
-* Formal protocol standardization
+- Dobson, Carreras, Lynch, Newman. *Complex systems analysis of series of
+  blackouts.* Chaos 17(2):026103, 2007.
+- Ren, Dobson. *Using transmission line outage data to estimate cascading
+  failure propagation.* IEEE TCAS-II 55(9), 2008.
+- Dobson. *Estimating the propagation and extent of cascading line outages
+  with a branching process.* IEEE TPS 27(4), 2012.
+
+The analysis and any conclusions are strictly those of the authors and not
+of Bonneville Power Administration.
+
 
 ---
 
