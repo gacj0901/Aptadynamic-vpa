@@ -65,4 +65,7 @@ def load_bpa(path: str) -> pd.DataFrame:
 def automatic_only(df: pd.DataFrame) -> pd.DataFrame:
     if "outage_type" not in df.columns:
         return df
-    return df[df["outage_type"].astype(str).str.strip().str.lower() == "auto"].reset_index(drop=True)
+    
+  
+    mask = df["outage_type"].astype(str).str.strip().str.lower().isin(["auto", "forced"])
+    return df[mask].reset_index(drop=True)

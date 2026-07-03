@@ -32,8 +32,8 @@ class ProjectionConfig:
     baseline_win: int = 24 * 90        # bins: baseline móvil de Δ, ~90 días
     g_smooth: int = 24                 # suavizado de D⁺M
     #driver: str = "load"
-    #driver: str = "intensity"
-    driver: str = "severity"
+    driver: str = "intensity"
+    #driver: str = "severity"
 
 def project(omega: pd.DataFrame, cfg: ProjectionConfig = ProjectionConfig()) -> pd.DataFrame:
     s = omega[cfg.driver].to_numpy(dtype=float)
