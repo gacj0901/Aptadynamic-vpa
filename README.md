@@ -1,8 +1,6 @@
-<<<<<<< HEAD
+
 # Aptadynamic-Electrical-Grid (Viability Power Administration)
-=======
 # Aptadynamic-VPA (Viability Power Administration)
->>>>>>> 7b888f7cb69ba0d484dc8d6b5edfc38cbced2542
 
 **G.A.C.J.** | ORCID: 0009-0009-5649-1359
 Copyright © 2026 G.A.C.J.
