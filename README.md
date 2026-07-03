@@ -48,6 +48,14 @@ ingest  →  omega  →  projection  →  validation
 - Significance: circular permutation test preserving autocorrelation,
   p < 0.005
 
+  ## Replication (NYISO 2008–2021)
+
+Negative: latent collapse does not discriminate conditional cascade
+severity in NYISO (ratio 0.55, both weekly and monthly memory).
+Sparse forced-outage stream (~2 events/day) leaves Ξ uninformative.
+This delimits the protocol's applicability rather than refuting it:
+projection requires minimum observable density.
+
 ## Usage
 pip install -e .
 python scripts/run_pipeline.py <path-to-outagesBPA.csv>
