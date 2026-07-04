@@ -23,6 +23,12 @@ The projection kernel π never models the phenomenon: no grid topology,
 propagation mechanism, or weather causation enters it. Only the observation
 operator O_D is domain-specific.
 
+## Observation Operator Contract
+
+An \(O_D\) is PRAMA-faithful if and only if it satisfies the five core conditions (C1–C5) derived from empirical validation on BPA and NYISO data.
+
+**[Read the full O_D Observation Contract →](O_D_Contract.md)**
+
 ## Projected magnitudes
 
 | Magnitude | Definition | Role |
