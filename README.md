@@ -27,7 +27,7 @@ operator O_D is domain-specific.
 
 An \(O_D\) is PRAMA-faithful if and only if it satisfies the five core conditions (C1–C5) derived from empirical validation on BPA and NYISO data.
 
-**[Read the full O_D Observation Contract →](O_D_Contract.md)**
+**[Read the  O_D Observation Contract →]( O_D Observation Contract.md )** 
 
 ## Projected magnitudes
 
