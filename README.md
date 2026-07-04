@@ -121,7 +121,7 @@ python scripts/sweep.py         data/dobson_bpa/outagesBPA.csv   # parameter swe
 viability generalizing Aubin viability theory with a genuine memory kernel
 and an endogenous, history-contracted threshold. Full axiomatization in the
 mathematical corpus (https://doi.org/10.5281/zenodo.20369325). Its conceptual
-origin is a published ontological work; none of it is required to run or
+origin is a published of systemic foundation; none of it is required to run or
 extend this repository.
 
 ## Acknowledgments
