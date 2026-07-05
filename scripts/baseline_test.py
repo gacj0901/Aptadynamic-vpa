@@ -8,7 +8,7 @@ from aptadynamic_eg.projection import ProjectionConfig
 df = automatic_only(load_bpa(sys.argv[1]))
 ev = cascades(df)
 om = omega_series(df)
-pr = project(om, ProjectionConfig(tau_memory=168, driver="intensity"))
+pr = project(om, ProjectionConfig(tau_memory=720, driver="intensity"))
 
 inten = om["intensity"].to_numpy()
 frac = pr["stratum"].isin([2, 4]).mean()
