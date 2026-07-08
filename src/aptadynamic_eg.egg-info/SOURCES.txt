@@ -1,0 +1,16 @@
+README.md
+pyproject.toml
+src/aptadynamic_eg/__init__.py
+src/aptadynamic_eg/omega.py
+src/aptadynamic_eg/projection.py
+src/aptadynamic_eg.egg-info/PKG-INFO
+src/aptadynamic_eg.egg-info/SOURCES.txt
+src/aptadynamic_eg.egg-info/dependency_links.txt
+src/aptadynamic_eg.egg-info/requires.txt
+src/aptadynamic_eg.egg-info/top_level.txt
+src/aptadynamic_eg/ingest/__init__.py
+src/aptadynamic_eg/ingest/convert_bpa_to_csv.py
+src/aptadynamic_eg/ingest/memory_analysis_bpa.py
+src/aptadynamic_eg/validation/__init__.py
+src/aptadynamic_eg/validation/explore_bpa_dataset.py
+src/aptadynamic_eg/validation/stationarity_test_bpa.py
