@@ -7,7 +7,7 @@ from aptadynamic_eg.projection import ProjectionConfig
 df = automatic_only(load_bpa(sys.argv[1]))
 ev = cascades(df)
 om = omega_series(df)
-pr = project(om, ProjectionConfig(theta_scale=1.0, tau_memory=168))
+pr = project(om, ProjectionConfig(theta_scale=1.0, tau_memory=720))
 
 real = precursor_enrichment(pr, ev, large_q=0.99, horizon_bins=12)["enrichment"]
 
