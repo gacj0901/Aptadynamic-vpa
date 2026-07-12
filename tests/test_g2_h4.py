@@ -77,6 +77,7 @@ def test_partition_gate_rebuilds_a_consistent_density_accumulator():
     expected[:48] = np.nan
     sigma = np.ones(n, dtype=bool)
     gamma = kernel_project(omega, expected, KernelConfig(), sigma_op=sigma)
+    gamma.loc[300:325, "valid"] = False
     gamma["omega"] = omega
     gamma["expected"] = expected
     gamma["sigma_op"] = sigma
@@ -88,3 +89,4 @@ def test_partition_gate_rebuilds_a_consistent_density_accumulator():
     assert record["C4"]["detail"].startswith("C4_D =")
     assert record["C4"]["passed"] is True
     assert record["MEM"]["passed"] is True
+    assert np.isfinite(record["C3"]["r_degenerate"])

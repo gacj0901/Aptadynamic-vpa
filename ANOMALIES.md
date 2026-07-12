@@ -35,3 +35,17 @@ with historical semantics `sigma_semantics_v1_activity`. This transitional
 derogation does not alter G1 evidence and expires when induction epoch v2 is
 opened. Epoch v2 must redesign `sigma_op` or record a new, explicitly justified
 derogation; silence cannot renew it.
+
+## 2026-07-12 — H4 gate record rejected a non-finite C3 diagnostic
+
+The first H4 invocation aborted while serializing the gate-stage record,
+before the outcome-access token was opened. Invalid interface rows had been
+passed to `check_degeneration` as NaNs. Its canonical running-mean reference
+uses a cumulative sum, so one invalid row propagated a non-finite
+`r_degenerate`; the strict JSON writer correctly refused that record. No
+cascade identifiers, severity threshold, outcome statistic, comparator or
+classification were constructed. The correction filters C3 to the channel's
+valid rows, which is the population on which its correlation is defined; C4
+continues to retain invalid temporal bins as zero-Delta kernel steps. A
+regression test with an explicit invalid-row gap now requires finite C3 output.
+All frozen H3 thresholds, partitions, seeds and replicate counts are unchanged.

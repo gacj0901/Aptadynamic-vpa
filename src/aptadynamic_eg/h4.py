@@ -120,8 +120,8 @@ def partition_gates(
     )
     record = {
         "C3": check_degeneration(
-            np.where(valid, part["delta"].to_numpy(dtype=float), np.nan),
-            np.where(valid, omega, np.nan), r_star=0.5, s_min=0.01,
+            part["delta"].to_numpy(dtype=float)[valid],
+            omega[valid], r_star=0.5, s_min=0.01,
         ),
         "RHO_I": check_inductive_ratio(omega, expected, band=rho_band),
         "C4": check_density(
