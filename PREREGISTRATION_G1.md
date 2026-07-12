@@ -1,23 +1,8 @@
 # PREREGISTRATION G1 — Causal grid evaluation
 
 **Status:** confirmatory specification, frozen before the G1 BPA/NYISO rerun.
-**Kernel:** `prama-protokol==0.2.1`, with causal `G[0]=0` and
+**Kernel:** `prama-protokol==0.2.0`, with causal `G[0]=0` and
 `G[t]=smooth_M[t]-smooth_M[t-1]`.
-
-## Amendment P1-A — maintenance-version identity (2026-07-11)
-
-Before any new confirmatory rerun, the frozen kernel identity is amended from
-`0.2.0` to `0.2.1`. Version 0.2.1 does not change projection arithmetic. Its
-identity is supported by the committed bit-exact golden vectors in
-`PRAMA-Protokol-py/tests/golden_gamma.npz`, Python/Rust equivalence records,
-and a non-confirmatory BPA smoke reproduction under 0.2.1. That reproduction
-preserved the prior diagnosis: C3 passed calibration and failed evaluation.
-The smoke outputs are operational evidence only and do not enter G1 results.
-
-The induction estimator is registered as epoch `grid_induction_v1`: expanding
-strict-past conditional mean by UTC month x hour, `min_context_count=10`,
-`min_hist=720`. Any change to this family, context, temporal regime, coverage
-parameters, or window opens a new induction epoch under C7.
 
 ## Fixed design
 
