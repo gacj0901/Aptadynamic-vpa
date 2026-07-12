@@ -70,3 +70,26 @@ The circular-shift null remains a temporal-dependence test with 10,000 shifts,
 seed `20260711`, and minimum shift 24 bins. Occurrence analyses at 6/12/24/48 h
 and `always_valid` results are secondary and must be labeled as such. Negative
 and invalid results are reported without changing this specification.
+
+## Amendments
+
+### G1-A1 — Kernel pin 0.2.0 → 0.2.1 (2026-07-11)
+
+Single change: `prama-protokol==0.2.0` → `prama-protokol==0.2.1`.
+Nothing else in this preregistration changes: partitions, seeds,
+thresholds, gates and classifications are untouched.
+
+Justification (outcome-invariant class): 0.2.1 modifies only the
+compliance module, tests and documentation; kernel arithmetic is
+bit-identical to 0.2.0, proven twice — (i) golden-vector regression
+(`PRAMA-Protokol-py/tests/golden_gamma.npz`, exact reproduction of Γ
+under grid and LLM configurations), and (ii) a BPA smoke run under
+0.2.1 reproducing the committed 0.2.0 evidence to all 16 decimal
+digits in every deterministic statistic. The decision to build 0.2.1
+predates that smoke run and was motivated by nomenclature and
+certification-record defects unrelated to any outcome.
+
+Anchors: prama-protokol tag v0.2.1 = `69a51de562910539a2b4c3755f167dd0789ad32d`, golden fixture
+sha256 = `d92de6a187b3bd8a634b286a4886a839746b04ea8300d6b480acde3e59766516`, smoke report `smoke_bpa_0_2_1.json` sha256 = `1689d12b73f97499fc895f379d27fbce7d1bbc8c2865cc1af9e4ddd220c4eb16`.
+This amendment does not retroactively qualify that smoke run as
+confirmatory; it makes the NEXT clean run under 0.2.1 eligible.
