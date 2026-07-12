@@ -1,0 +1,436 @@
+{
+  "schema_version": 2,
+  "run_mode": "confirmatory_H4_gate_stage",
+  "outcomes_accessed": false,
+  "outcome_columns_constructed": [],
+  "order_rule": "evaluation gates completed before outcome-dependent statistics",
+  "generated_at_utc": "2026-07-12T19:20:15.727417+00:00",
+  "commits": {
+    "grid": "fdd4ce4e15cbf390db71afb9322d7dd3b77cf10e",
+    "prama": "717fce4ce1592f9fa15636d43fa047d7fdda9004"
+  },
+  "h3": {
+    "commit": "6672bdacf2f873c8c72870ceb86b9fb2aa993ef8",
+    "file_sha256": "19edba6684f45bd746962ed11daf905d68cd209de44cf164f9c386fd9a63bf52"
+  },
+  "kernel_config": {
+    "tau_memory": 336,
+    "lambda_eq": 1.0,
+    "lambda_recovery": 0.005,
+    "lambda_min": 0.1,
+    "theta_scale": 2.0,
+    "g_smooth": 24,
+    "kappa": 0.05
+  },
+  "seeds": {
+    "bootstrap": 20260714,
+    "tie": 20260715,
+    "alignment": 20260716,
+    "C4": 20260717
+  },
+  "replicates": {
+    "bootstrap": 10000,
+    "alignment": 10000,
+    "C4": 1000
+  },
+  "channels": {
+    "CH-L": {
+      "schema_version": 2,
+      "kernel_config": {
+        "tau_memory": 336,
+        "lambda_eq": 1.0,
+        "lambda_recovery": 0.005,
+        "lambda_min": 0.1,
+        "theta_scale": 2.0,
+        "g_smooth": 24,
+        "kappa": 0.05
+      },
+      "interface_config": {
+        "driver": "nyca_load_hourly",
+        "normalization": "L(t) / median_calibration_valid_L",
+        "reference": "18390.729166666664",
+        "q_floor": "919.53645833333326",
+        "min_context_count": 10,
+        "min_hist": 720,
+        "align_utc": true,
+        "sigma_op_semantics": "valid_CH-L_and_load_above_calibration_q_floor",
+        "trailing_days": 1096,
+        "trailing_volatility_window": null
+      },
+      "induction": {
+        "epoch_id": "nyiso_chl_induction_v1",
+        "estimator": "causal_trailing_conditional_mean",
+        "regime": "trailing_1096_days_per_cell",
+        "estimator_hash": "1a5164ce975ed82ebffdd8f28278019a6c15d7cd0e832f7fcd25f7ba1563d695"
+      }
+    },
+    "CH-P": {
+      "schema_version": 2,
+      "kernel_config": {
+        "tau_memory": 336,
+        "lambda_eq": 1.0,
+        "lambda_recovery": 0.005,
+        "lambda_min": 0.1,
+        "theta_scale": 2.0,
+        "g_smooth": 24,
+        "kappa": 0.05
+      },
+      "interface_config": {
+        "driver": "lbmp_intrahour_std",
+        "normalization": "log1p(s(t) / median_calibration_valid_s)",
+        "reference": "5.8443441545047223",
+        "q_floor": "919.53645833333326",
+        "min_context_count": 10,
+        "min_hist": 720,
+        "align_utc": true,
+        "sigma_op_semantics": "valid_CH-L_and_load_above_calibration_q_floor",
+        "trailing_days": 1096,
+        "trailing_volatility_window": 1
+      },
+      "induction": {
+        "epoch_id": "nyiso_chp_induction_v1",
+        "estimator": "causal_trailing_conditional_mean",
+        "regime": "trailing_1096_days_per_cell",
+        "estimator_hash": "1a5164ce975ed82ebffdd8f28278019a6c15d7cd0e832f7fcd25f7ba1563d695"
+      }
+    },
+    "CH-F": {
+      "schema_version": 2,
+      "kernel_config": {
+        "tau_memory": 336,
+        "lambda_eq": 1.0,
+        "lambda_recovery": 0.005,
+        "lambda_min": 0.1,
+        "theta_scale": 2.0,
+        "g_smooth": 24,
+        "kappa": 0.05
+      },
+      "interface_config": {
+        "driver": "outage_intensity",
+        "normalization": "identity on hourly outage-start count",
+        "reference": "1",
+        "q_floor": "919.53645833333326",
+        "min_context_count": 10,
+        "min_hist": 720,
+        "align_utc": true,
+        "sigma_op_semantics": "valid_CH-L_and_load_above_calibration_q_floor",
+        "trailing_days": null,
+        "trailing_volatility_window": null
+      },
+      "induction": {
+        "epoch_id": "nyiso_chf_induction_v2",
+        "estimator": "expected_profile",
+        "regime": "expanding",
+        "estimator_hash": "f4be8f67922285fba9b87283e707685b14aa53d0d0dc1c695da3d4d5c9bce742"
+      }
+    }
+  },
+  "gates": {
+    "CH-L": {
+      "C2": {
+        "check": "C2 causality",
+        "passed": true,
+        "detail": "invariant under 8 truncations (max diff 0.000e+00)",
+        "matches_projected_expectation_exactly": true
+      },
+      "calibration": {
+        "C3": {
+          "check": "C3 degeneration",
+          "passed": true,
+          "detail": "r_\u0394\u03c9 = +0.471, r_deg = +0.234, separation = -0.2372 (s_min = 0.01), absolute threshold r_star = 0.5, branch = absolute",
+          "r_delta_omega": 0.4711300864969413,
+          "r_degenerate": 0.23390959428386868,
+          "separation": -0.23722049221307265,
+          "s_min": 0.01,
+          "r_star": 0.5,
+          "branch": "absolute"
+        },
+        "RHO_I": {
+          "check": "RHO_I inductive ratio",
+          "passed": true,
+          "detail": "rho_I = +0.7868, declared band [0.1, 0.95]",
+          "rho_I": 0.7867936625757861,
+          "band": [
+            0.1,
+            0.95
+          ]
+        },
+        "C4": {
+          "check": "C4 informational density",
+          "passed": true,
+          "detail": "C4_D = 2.851 (stratified permutation null, n_null=1000, seed=20260717; Var(\u039e)=2.733e-04, null Var q05/q50/q95 = 9.431e-05/9.589e-05/9.736e-05), declared f_star = 1.5",
+          "C4_D": 2.85095281796431,
+          "f_star": 1.5,
+          "n_null": 1000,
+          "seed": 20260717,
+          "stratified": true
+        },
+        "MEM": {
+          "check": "MEM memory ratio",
+          "passed": true,
+          "detail": "L_cal/tau_K = 56.4, declared min = 20.0",
+          "ratio": 56.38988095238095,
+          "min_ratio": 20.0
+        },
+        "all_passed": true
+      },
+      "evaluation": {
+        "C3": {
+          "check": "C3 degeneration",
+          "passed": true,
+          "detail": "r_\u0394\u03c9 = +0.281, r_deg = +0.204, separation = -0.0768 (s_min = 0.01), absolute threshold r_star = 0.5, branch = absolute",
+          "r_delta_omega": 0.28133434407129443,
+          "r_degenerate": 0.20449304692235912,
+          "separation": -0.07684129714893531,
+          "s_min": 0.01,
+          "r_star": 0.5,
+          "branch": "absolute"
+        },
+        "RHO_I": {
+          "check": "RHO_I inductive ratio",
+          "passed": true,
+          "detail": "rho_I = +0.7800, declared band [0.1, 0.95]",
+          "rho_I": 0.7800285056071665,
+          "band": [
+            0.1,
+            0.95
+          ]
+        },
+        "C4": {
+          "check": "C4 informational density",
+          "passed": true,
+          "detail": "C4_D = 1.603 (stratified permutation null, n_null=1000, seed=20260717; Var(\u039e)=1.410e-04, null Var q05/q50/q95 = 8.741e-05/8.794e-05/8.849e-05), declared f_star = 1.5",
+          "C4_D": 1.6026964242537398,
+          "f_star": 1.5,
+          "n_null": 1000,
+          "seed": 20260717,
+          "stratified": true
+        },
+        "MEM": {
+          "check": "MEM memory ratio",
+          "passed": true,
+          "detail": "L_cal/tau_K = 258.7, declared min = 20.0",
+          "ratio": 258.7261904761905,
+          "min_ratio": 20.0
+        },
+        "all_passed": true
+      },
+      "N1": {
+        "check": "N1 scale invariance",
+        "passed": true,
+        "detail": "physical-channel rescaling verified at atol=1e-9 by test_g2_h2.py",
+        "test_commit": "9a6abe7169338105362686f557d1fb8a7483a8a3"
+      },
+      "sigma_op": {
+        "check": "sigma_op conformance",
+        "passed": true,
+        "detail": "sigma_op implies channel validity and uses frozen CH-L q_floor"
+      },
+      "all_passed": true
+    },
+    "CH-P": {
+      "C2": {
+        "check": "C2 causality",
+        "passed": true,
+        "detail": "invariant under 8 truncations (max diff 0.000e+00)",
+        "matches_projected_expectation_exactly": true
+      },
+      "calibration": {
+        "C3": {
+          "check": "C3 degeneration",
+          "passed": false,
+          "detail": "r_\u0394\u03c9 = +0.588, r_deg = +0.587, separation = -0.0008 (s_min = 0.01), absolute threshold r_star = 0.5, branch = none",
+          "r_delta_omega": 0.5877847743338673,
+          "r_degenerate": 0.5869568946449014,
+          "separation": -0.0008278796889659157,
+          "s_min": 0.01,
+          "r_star": 0.5,
+          "branch": "none"
+        },
+        "RHO_I": {
+          "check": "RHO_I inductive ratio",
+          "passed": true,
+          "detail": "rho_I = +0.1746, declared band [0.1, 0.9]",
+          "rho_I": 0.1745961112958041,
+          "band": [
+            0.1,
+            0.9
+          ]
+        },
+        "C4": {
+          "check": "C4 informational density",
+          "passed": true,
+          "detail": "C4_D = 14.323 (stratified permutation null, n_null=1000, seed=20260717; Var(\u039e)=7.337e-03, null Var q05/q50/q95 = 4.682e-04/5.120e-04/5.610e-04), declared f_star = 1.5",
+          "C4_D": 14.322852613344581,
+          "f_star": 1.5,
+          "n_null": 1000,
+          "seed": 20260717,
+          "stratified": true
+        },
+        "MEM": {
+          "check": "MEM memory ratio",
+          "passed": true,
+          "detail": "L_cal/tau_K = 56.4, declared min = 20.0",
+          "ratio": 56.38988095238095,
+          "min_ratio": 20.0
+        },
+        "all_passed": false
+      },
+      "evaluation": {
+        "C3": {
+          "check": "C3 degeneration",
+          "passed": true,
+          "detail": "r_\u0394\u03c9 = +0.639, r_deg = +0.682, separation = +0.0434 (s_min = 0.01), absolute threshold r_star = 0.5, branch = relative",
+          "r_delta_omega": 0.639074131633989,
+          "r_degenerate": 0.6824702581340171,
+          "separation": 0.04339612650002811,
+          "s_min": 0.01,
+          "r_star": 0.5,
+          "branch": "relative"
+        },
+        "RHO_I": {
+          "check": "RHO_I inductive ratio",
+          "passed": false,
+          "detail": "rho_I = +0.0785, declared band [0.1, 0.9]",
+          "rho_I": 0.0785319303253389,
+          "band": [
+            0.1,
+            0.9
+          ]
+        },
+        "C4": {
+          "check": "C4 informational density",
+          "passed": true,
+          "detail": "C4_D = 2.668 (stratified permutation null, n_null=1000, seed=20260717; Var(\u039e)=1.526e-03, null Var q05/q50/q95 = 5.525e-04/5.721e-04/5.915e-04), declared f_star = 1.5",
+          "C4_D": 2.6678895438288333,
+          "f_star": 1.5,
+          "n_null": 1000,
+          "seed": 20260717,
+          "stratified": true
+        },
+        "MEM": {
+          "check": "MEM memory ratio",
+          "passed": true,
+          "detail": "L_cal/tau_K = 258.7, declared min = 20.0",
+          "ratio": 258.7261904761905,
+          "min_ratio": 20.0
+        },
+        "all_passed": false
+      },
+      "N1": {
+        "check": "N1 scale invariance",
+        "passed": true,
+        "detail": "physical-channel rescaling verified at atol=1e-9 by test_g2_h2.py",
+        "test_commit": "9a6abe7169338105362686f557d1fb8a7483a8a3"
+      },
+      "sigma_op": {
+        "check": "sigma_op conformance",
+        "passed": true,
+        "detail": "sigma_op implies channel validity and uses frozen CH-L q_floor"
+      },
+      "all_passed": false
+    },
+    "CH-F": {
+      "C2": {
+        "check": "C2 causality",
+        "passed": true,
+        "detail": "invariant under 8 truncations (max diff 0.000e+00)",
+        "matches_projected_expectation_exactly": true
+      },
+      "calibration": {
+        "C3": {
+          "check": "C3 degeneration",
+          "passed": true,
+          "detail": "r_\u0394\u03c9 = +0.954, r_deg = +0.998, separation = +0.0437 (s_min = 0.01), absolute threshold r_star = 0.5, branch = relative",
+          "r_delta_omega": 0.9540699948038763,
+          "r_degenerate": 0.9977620913319428,
+          "separation": 0.04369209652806649,
+          "s_min": 0.01,
+          "r_star": 0.5,
+          "branch": "relative"
+        },
+        "RHO_I": {
+          "check": "RHO_I inductive ratio",
+          "passed": false,
+          "detail": "rho_I = +0.0101, declared band [0.1, 0.9]",
+          "rho_I": 0.01008383734619267,
+          "band": [
+            0.1,
+            0.9
+          ]
+        },
+        "C4": {
+          "check": "C4 informational density",
+          "passed": false,
+          "detail": "C4_D = 1.357 (stratified permutation null, n_null=1000, seed=20260717; Var(\u039e)=1.154e-03, null Var q05/q50/q95 = 7.974e-04/8.499e-04/9.028e-04), declared f_star = 1.5",
+          "C4_D": 1.3569857011645803,
+          "f_star": 1.5,
+          "n_null": 1000,
+          "seed": 20260717,
+          "stratified": true
+        },
+        "MEM": {
+          "check": "MEM memory ratio",
+          "passed": true,
+          "detail": "L_cal/tau_K = 56.4, declared min = 20.0",
+          "ratio": 56.38988095238095,
+          "min_ratio": 20.0
+        },
+        "all_passed": false
+      },
+      "evaluation": {
+        "C3": {
+          "check": "C3 degeneration",
+          "passed": true,
+          "detail": "r_\u0394\u03c9 = +0.979, r_deg = +0.999, separation = +0.0191 (s_min = 0.01), absolute threshold r_star = 0.5, branch = relative",
+          "r_delta_omega": 0.9794112320996224,
+          "r_degenerate": 0.9985237626768348,
+          "separation": 0.019112530577212405,
+          "s_min": 0.01,
+          "r_star": 0.5,
+          "branch": "relative"
+        },
+        "RHO_I": {
+          "check": "RHO_I inductive ratio",
+          "passed": false,
+          "detail": "rho_I = +0.0166, declared band [0.1, 0.9]",
+          "rho_I": 0.016607891966135213,
+          "band": [
+            0.1,
+            0.9
+          ]
+        },
+        "C4": {
+          "check": "C4 informational density",
+          "passed": true,
+          "detail": "C4_D = 6.493 (stratified permutation null, n_null=1000, seed=20260717; Var(\u039e)=5.039e-03, null Var q05/q50/q95 = 7.460e-04/7.756e-04/8.087e-04), declared f_star = 1.5",
+          "C4_D": 6.49293828873359,
+          "f_star": 1.5,
+          "n_null": 1000,
+          "seed": 20260717,
+          "stratified": true
+        },
+        "MEM": {
+          "check": "MEM memory ratio",
+          "passed": true,
+          "detail": "L_cal/tau_K = 258.7, declared min = 20.0",
+          "ratio": 258.7261904761905,
+          "min_ratio": 20.0
+        },
+        "all_passed": false
+      },
+      "N1": {
+        "check": "N1 scale invariance",
+        "passed": null,
+        "detail": "N/A: outage count is dimensionless with canonical scale",
+        "test_commit": "9a6abe7169338105362686f557d1fb8a7483a8a3"
+      },
+      "sigma_op": {
+        "check": "sigma_op conformance",
+        "passed": true,
+        "detail": "sigma_op implies channel validity and uses frozen CH-L q_floor"
+      },
+      "all_passed": false
+    }
+  }
+}
