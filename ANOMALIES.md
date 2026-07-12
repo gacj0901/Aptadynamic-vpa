@@ -84,3 +84,19 @@ minimum of two observations/pairs. Missing values are excluded, never filled
 or synthesized. Regression tests compare AC1 with a direct pairwise-complete
 calculation and require causal prefix invariance through explicit gaps. All
 H3 windows, thresholds, partitions, seeds and replicate counts are unchanged.
+
+## 2026-07-12 — H4 common-valid mask inherited a read-only view
+
+The fourth H4 invocation completed all gates, opened the outcome token,
+constructed cascade identifiers and the calibration severity P95, and
+successfully constructed all four baseline signals. Before fitting alert
+budgets or selecting a comparator, intersection of their finite-support masks
+used in-place `&=` on a read-only Pandas 3 view and aborted. No comparator,
+bootstrap, alignment null, evaluation contrast or classification was computed.
+The gate-stage record SHA-256 was
+`2f8e32d8969ba062e7aa6faaef9106073ba3333c2eaa3d6d6d6d66a8bdd30f37`.
+The correction centralizes same-point validity in `common_valid_mask`, which
+always creates an explicit writable Boolean copy before intersection. The
+regression test starts from a Pandas-backed array and requires both the exact
+intersection and a writable result. This changes no H3 algorithm, threshold,
+partition, seed or replicate count.

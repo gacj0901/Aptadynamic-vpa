@@ -36,6 +36,7 @@ from aptadynamic_eg.g2 import (
 from aptadynamic_eg.h4 import (
     BASELINE_NAMES,
     baseline_signals,
+    common_valid_mask,
     construct_cascade_outcomes,
     holm_adjust,
     partition_gates,
@@ -331,9 +332,9 @@ def main() -> int:
         primary["expected"].to_numpy(dtype=float),
         split_idx,
     )
-    common_valid = primary["valid"].to_numpy(dtype=bool)
-    for signal in signals.values():
-        common_valid &= np.isfinite(signal)
+    common_valid = common_valid_mask(
+        primary["valid"].to_numpy(dtype=bool), signals
+    )
     primary["valid"] = common_valid
     primary["t"] = domain.index.as_unit("s").asi8
 

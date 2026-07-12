@@ -26,6 +26,18 @@ class GateDecision:
     all_primary_gates_passed: bool
 
 
+def common_valid_mask(
+    projection_valid: np.ndarray,
+    signals: dict[str, np.ndarray],
+) -> np.ndarray:
+    """Return a writable same-points mask for PRAMA and every comparator."""
+
+    result = np.array(projection_valid, dtype=bool, copy=True)
+    for signal in signals.values():
+        result &= np.isfinite(signal)
+    return result
+
+
 def rolling_ac1(values: np.ndarray, window: int = 336) -> np.ndarray:
     """Causal rolling lag-1 correlation using pairwise-complete clock hours."""
 

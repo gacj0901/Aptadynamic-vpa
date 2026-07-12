@@ -8,6 +8,7 @@ from prama_protokol import KernelConfig, project as kernel_project
 from aptadynamic_eg.h4 import (
     GateDecision,
     baseline_signals,
+    common_valid_mask,
     construct_cascade_outcomes,
     holm_adjust,
     partition_gates,
@@ -85,6 +86,13 @@ def test_outcome_construction_is_locked_until_primary_gates_pass():
 def test_holm_adjustment_is_step_down_and_monotone():
     adjusted = holm_adjust({"a": 0.01, "b": 0.03, "c": 0.02})
     assert adjusted == {"a": 0.03, "c": 0.04, "b": 0.04}
+
+
+def test_common_valid_mask_is_writable_with_pandas_backed_input():
+    source = pd.Series([True, True, False]).to_numpy(dtype=bool)
+    result = common_valid_mask(source, {"x": np.array([1.0, np.nan, 2.0])})
+    assert result.flags.writeable
+    assert result.tolist() == [True, False, False]
 
 
 def test_partition_gate_rebuilds_a_consistent_density_accumulator():
