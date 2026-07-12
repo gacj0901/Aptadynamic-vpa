@@ -1,6 +1,6 @@
 [project]
 name = "Aptadynamic-Electrical-Grid"
-version = "0.1.0"
+version = "0.2.0"
 description = "Aptadynamic VPA: PRAMA projection over BPA outage observables"
 requires-python = ">=3.10"
 dependencies = ["pandas>=2.0", "numpy>=1.24", "prama-protokol==0.2.1"]

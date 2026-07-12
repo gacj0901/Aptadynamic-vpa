@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
+import inspect
 import json
 import platform
 import subprocess
@@ -47,6 +49,14 @@ def git_dirty(path: Path) -> bool | None:
         )
     except (OSError, subprocess.CalledProcessError):
         return None
+
+
+def estimator_source_hash() -> str:
+    """Hash only estimator source; estimator parameters live in interface_config."""
+
+    return hashlib.sha256(
+        inspect.getsource(expected_profile).encode("utf-8")
+    ).hexdigest()
 
 
 def evaluate_mode(
@@ -139,8 +149,8 @@ def main() -> None:
             "allow a non-frozen kernel version for a non-confirmatory operational check"
         ),
     )
-    parser.add_argument("--induction-epoch", required=True,
-                        help="C7 identifier for the frozen induction estimator")
+    parser.add_argument("--induction-epoch",
+                        help="C7 identifier; defaults to the domain's frozen G1 epoch")
     parser.add_argument("--diagnostic-n-null", type=int, default=200,
                         help="permutations for informational C4 density")
     parser.add_argument("--calibration-end", required=True,
@@ -157,6 +167,7 @@ def main() -> None:
     if args.diagnostic_n_null < 1:
         parser.error("--diagnostic-n-null must be positive")
     frozen_kernel = "0.2.1"
+    # Per amendment G1-A1. Smoke mode remains explicitly non-confirmatory.
     version_allowed = prama_protokol.__version__ == frozen_kernel or args.smoke_test
     if not version_allowed:
         raise RuntimeError(
@@ -167,7 +178,8 @@ def main() -> None:
     events_raw = load_bpa(args.dataset)
     events_filtered = automatic_only(events_raw)
     events = cascades(events_filtered)
-    om = omega_series(events_filtered)
+    # G1 frozen semantics — see ANOMALIES.md (a).
+    om = omega_series(events_filtered, align_utc=False)
     cfg = ProjectionConfig()  # fixed universal defaults; never outcome-tuned here
     calibration_end = pd.Timestamp(args.calibration_end)
     if calibration_end.tzinfo is None:
@@ -266,9 +278,10 @@ def main() -> None:
         + timestamps.dt.hour.to_numpy(dtype=np.int16)
     )
     kernel_cfg = cfg.kernel_config()
+    induction_epoch = args.induction_epoch or f"{args.domain.lower()}_induction_v1"
     informational_diagnostics = {
         "status": "informational_no_preregistered_thresholds",
-        "induction_epoch": args.induction_epoch,
+        "induction_epoch": induction_epoch,
         "RHO_I": {
             "calibration": check_inductive_ratio(
                 observed[:calibration_end_idx], expected[:calibration_end_idx]
@@ -309,18 +322,23 @@ def main() -> None:
             "prama_protokol": git_dirty(prama_root),
         },
         "kernel_config": asdict(kernel_cfg),
-        "observation_interface": {
-            "observable": cfg.driver,
+        "interface_config": {
+            "driver": cfg.driver,
             "normalization": "identity on hourly outage intensity",
-            "sigma_op_modes": ["activity", "always_valid"],
-        },
-        "induction_config": {
-            "induction_epoch": args.induction_epoch,
-            "family": "strict-past conditional mean",
-            "temporal_regime": "expanding",
-            "context": ["UTC month", "UTC hour"],
             "min_context_count": cfg.min_context_count,
             "min_hist": cfg.min_hist,
+            "align_utc": False,
+            "sigma_op_semantics": "sigma_semantics_v1_activity",
+            "sensitivity_sigma_op_semantics": "always_valid",
+            "noncausal_driver": bool(last_projection["noncausal_driver"].iloc[0]),
+        },
+        # Kernel API remains run_all(induction_epoch=...); only the report
+        # mapping is named induction.epoch_id under schema v2.
+        "induction": {
+            "epoch_id": induction_epoch,
+            "estimator": "causal_conditional_mean(month_utc x hour_utc)",
+            "regime": "expanding",
+            "estimator_hash": estimator_source_hash(),
         },
         "seed": args.seed,
         "n_permutations": args.n_permutations,

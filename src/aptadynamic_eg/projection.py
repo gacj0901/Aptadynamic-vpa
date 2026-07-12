@@ -8,6 +8,7 @@ import numpy as np
 import pandas as pd
 from prama_protokol import KernelConfig, project as prama_project, stratify
 
+from .drivers import driver_spec
 from .omega import expected_profile
 
 
@@ -23,6 +24,7 @@ class ProjectionConfig:
     driver: str = "intensity"
     min_context_count: int = 10
     min_hist: int = 24 * 30
+    allow_noncausal_exploratory: bool = False
 
     def kernel_config(self) -> KernelConfig:
         return KernelConfig(
@@ -55,6 +57,14 @@ def project(
         raise ValueError("cannot project an empty omega series")
     if cfg.driver not in omega.columns:
         raise ValueError(f"driver {cfg.driver!r} not present in omega columns: {list(omega.columns)}")
+    spec = driver_spec(cfg.driver)
+    noncausal_driver = spec["causal"] is not True
+    if noncausal_driver and not cfg.allow_noncausal_exploratory:
+        raise ValueError(
+            f"driver {cfg.driver!r} is not unconditionally causal and is blocked "
+            "from evaluation; see ANOMALIES.md (b). Set "
+            "allow_noncausal_exploratory=True only for labeled exploratory use."
+        )
 
     obs = omega[cfg.driver].to_numpy(dtype=float)
     expected = expected_profile(
@@ -76,5 +86,6 @@ def project(
     for col in ("delta", "xi", "lambda", "theta", "M", "G", "latent_collapse", "stratum", "valid"):
         out[col] = gamma[col].to_numpy()
     out["driver"] = cfg.driver
+    out["noncausal_driver"] = noncausal_driver
     out["sigma_op_mode"] = sigma_op_mode
     return out

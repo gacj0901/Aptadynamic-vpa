@@ -40,7 +40,7 @@ unchanged from the PRAMA Protokol reference, not reimplemented here.
 | Magnitude | Definition | Role |
 |---|---|---|
 | Δ(t) | \|ω − ω̂\| / (ω̂ + 1), ω̂ = strictly causal E[intensity \| month × hour] | Structural decoupling — deviation from the system's own expected activity, never raw intensity |
-| Ξ(t) | Σ K(t−s) Δ(s), exponential causal kernel, τ = 720 h | Non-Markovian tension accumulator |
+| Ξ(t) | Σ K(t−s) Δ(s), exponential causal kernel, τ = 336 h | Non-Markovian tension accumulator |
 | λ(t) | eroded by excess (Ξ−Θ)⁺, bounded recovery; recovery never reduces Ξ | Remaining absorption capacity |
 | Θ(λ) | θ_s · λ, contracts as excess accumulates | Endogenous threshold, not a fixed cutoff |
 | M(t) | Θ − Ξ | Viability margin |
@@ -63,9 +63,10 @@ new figures.
   latent-collapse periods vs **0.003** outside — **enrichment ratio 28.75**
   (historical iid label shuffle; superseded by the circular-shift null).
 - Causal Markovian baseline (trailing intensity, matched alert budget): **3.16**.
-- Memory scale τ = 720 h selected by a reported sweep over {168, 336, 720} h;
-  enrichment increases monotonically with memory (16.0 → 23.4 → 28.75) while the
-  flagged-time fraction stays near 4%, arguing against alert-budget dilution.
+- Historical 0.1.0 provenance: an outcome-exposed sweep over {168, 336, 720} h
+  reported increasing enrichment with memory. It has not been causally
+  revalidated and does not select the current scale. G1 freezes τ = 336 h; see
+  `ANOMALIES.md` (README memory-scale inconsistency).
 - Independence partition: periods flagged only by the projection retain
   P(size ≥ 4) = **0.086** vs **0.003** where neither signal fires (~29×). At this
   memory scale every baseline alert falls inside a projection-flagged period,
@@ -118,8 +119,8 @@ of particular cascading sequences are reported.
 ```
 pip install -e .
 
-python scripts/reproduce_bpa.py data/dobson_bpa/outagesBPA.csv --domain BPA --calibration-id bpa_calib_1999_2003_v1 --induction-epoch grid_induction_v1 --calibration-end 2004-01-01T00:00:00Z --output-prefix results/reproduction_bpa
-python scripts/reproduce_bpa.py data/dobson_nyiso/outagesNYISO.csv --domain NYISO --calibration-id nyiso_calib_2008_2010_v1 --induction-epoch grid_induction_v1 --calibration-end 2011-01-01T00:00:00Z --output-prefix results/reproduction_nyiso
+python scripts/reproduce_bpa.py data/dobson_bpa/outagesBPA.csv --domain BPA --calibration-id bpa_calib_1999_2003_v1 --induction-epoch bpa_induction_v1 --calibration-end 2004-01-01T00:00:00Z --output-prefix results/reproduction_bpa
+python scripts/reproduce_bpa.py data/dobson_nyiso/outagesNYISO.csv --domain NYISO --calibration-id nyiso_calib_2008_2010_v1 --induction-epoch nyiso_induction_v1 --calibration-end 2011-01-01T00:00:00Z --output-prefix results/reproduction_nyiso
 ```
 
 ## Methodological discipline

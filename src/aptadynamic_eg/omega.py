@@ -27,7 +27,11 @@ def cascade_sizes(df: pd.DataFrame) -> pd.Series:
     return df.groupby("cascade_id").size()
 
 
-def omega_series(df: pd.DataFrame, bin_s: int = BIN_S) -> pd.DataFrame:
+def omega_series(
+    df: pd.DataFrame,
+    bin_s: int = BIN_S,
+    align_utc: bool = True,
+) -> pd.DataFrame:
     """Convert outage events to hourly observable streams.
 
     ``intensity`` counts outage starts, ``load`` counts active outages, and
@@ -40,9 +44,17 @@ def omega_series(df: pd.DataFrame, bin_s: int = BIN_S) -> pd.DataFrame:
     ev = df.sort_values("t_out").reset_index(drop=True).copy()
     ev["t_in"] = ev["t_in"].fillna(ev["t_out"])
 
-    t0 = int(ev["t_out"].min())
-    t1 = int(ev["t_in"].max())
-    edges = np.arange(t0, t1 + bin_s + 1, bin_s)
+    if align_utc:
+        t0 = (int(ev["t_out"].min()) // bin_s) * bin_s
+        t1 = -((-int(ev["t_in"].max())) // bin_s) * bin_s
+        # Keep a full bin when the final event/restoration lies exactly on an
+        # aligned boundary; every observable event must belong to one bin.
+        edges = np.arange(t0, t1 + bin_s + 1, bin_s)
+    else:
+        # G1 frozen semantics — see ANOMALIES.md (a).
+        t0 = int(ev["t_out"].min())
+        t1 = int(ev["t_in"].max())
+        edges = np.arange(t0, t1 + bin_s + 1, bin_s)
     n = len(edges) - 1
 
     intensity = np.zeros(n)
