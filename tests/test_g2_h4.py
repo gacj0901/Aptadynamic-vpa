@@ -20,6 +20,7 @@ def test_rolling_ac1_matches_direct_complete_window():
     rng = np.random.default_rng(7)
     values = rng.normal(size=500)
     observed = rolling_ac1(values, window=48)
+    assert observed.flags.writeable
     for stop in (47, 48, 200, 499):
         if stop < 47:
             assert np.isnan(observed[stop])

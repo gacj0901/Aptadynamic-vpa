@@ -43,7 +43,7 @@ def rolling_ac1(values: np.ndarray, window: int = 336) -> np.ndarray:
         (sum_left2 - sum_left * sum_left / pairs)
         * (sum_right2 - sum_right * sum_right / pairs)
     )
-    result = (numerator / denominator).to_numpy(dtype=float)
+    result = (numerator / denominator).to_numpy(dtype=float, copy=True)
     result[~np.isfinite(result)] = np.nan
     return result
 

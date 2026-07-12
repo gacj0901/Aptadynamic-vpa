@@ -49,3 +49,21 @@ valid rows, which is the population on which its correlation is defined; C4
 continues to retain invalid temporal bins as zero-Delta kernel steps. A
 regression test with an explicit invalid-row gap now requires finite C3 output.
 All frozen H3 thresholds, partitions, seeds and replicate counts are unchanged.
+
+## 2026-07-12 — H4 rolling-AC1 buffer was read-only under Pandas 3
+
+The second H4 invocation completed and serialized every observation gate;
+CH-L passed both partitions and the outcome token opened. Cascade identifiers
+and the calibration severity P95 were then constructed, so this incident is
+explicitly post-exposure. Before comparator selection or any evaluation
+statistic, `rolling_ac1` attempted to replace non-finite values in a NumPy
+view returned read-only by Pandas 3 and raised `ValueError: assignment
+destination is read-only`. No comparator, bootstrap, alignment null,
+evaluation contrast or classification was computed or written. The gate-stage
+record was valid and reported `outcomes_accessed: false` because it predates
+the token; its SHA-256 was
+`e28c2e337b3b054c214acdd85f05329c5fa1d749cd1f82e57caaf87644283e0c`.
+The correction requests an explicit writable copy from `to_numpy`; a
+regression assertion now requires that buffer to be writable. This is a
+runtime-compatibility fix only. All H3 thresholds, algorithms, partitions,
+seeds and replicate counts remain unchanged.
