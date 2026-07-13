@@ -2,8 +2,14 @@ from __future__ import annotations
 
 import numpy as np
 import pandas as pd
+import pytest
 
-from aptadynamic_eg.ingest import _epoch_seconds, load_bpa
+from aptadynamic_eg.ingest import (
+    _epoch_seconds,
+    automatic_only,
+    automatic_only_with_audit,
+    load_bpa,
+)
 from aptadynamic_eg.evaluation import (
     apply_frozen_threshold, cascade_evaluation_rows, circular_shift_null,
     fit_frozen_budget_calibration, paired_cascade_bootstrap,
@@ -30,6 +36,30 @@ def test_mathematica_absolute_time_is_converted_to_unix_epoch():
     out = _epoch_seconds(values, numeric_epoch="mathematica_1900")
     assert out.tolist() == [915228420, 915228480]
     assert pd.to_datetime(out.iloc[0], unit="s", utc=True).year == 1999
+
+
+def test_confirmatory_outage_filter_fails_closed_without_type_column():
+    events = pd.DataFrame({"t_out": [1, 2]})
+    with pytest.raises(ValueError, match="requires outage_type"):
+        automatic_only(events, require_column=True)
+    # Exploratory behavior remains explicitly backward compatible.
+    assert automatic_only(events).equals(events.reset_index(drop=True))
+
+
+def test_outage_filter_excludes_and_counts_unrecognized_values():
+    events = pd.DataFrame(
+        {"outage_type": ["Auto", " forced ", "planned", "mystery", None]}
+    )
+    filtered, record = automatic_only_with_audit(events, require_column=True)
+    assert filtered["outage_type"].tolist() == ["Auto", " forced "]
+    assert record["n_before"] == 5
+    assert record["n_after"] == 2
+    assert record["n_excluded"] == 3
+    assert record["unrecognized_value_counts"] == {
+        "<missing>": 1,
+        "mystery": 1,
+        "planned": 1,
+    }
 
 
 def test_evaluation_is_strictly_pre_cascade_and_valid_only():
@@ -82,6 +112,9 @@ def test_paired_bootstrap_preserves_row_pairing():
     b = paired_cascade_bootstrap(rows, baseline, 4, 100, 9)
     assert a == b
     assert a["unit"] == "cascade"
+    assert "not a centered bootstrap null test" in (
+        a["p_one_sided_prama_superior_semantics"]
+    )
 
 
 def test_circular_null_is_seeded_and_reports_corrected_p():

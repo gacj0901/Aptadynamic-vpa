@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import numpy as np
 import pandas as pd
+import pytest
 
 from aptadynamic_eg.drivers import DRIVER_SPECS
 from aptadynamic_eg.g2 import (
@@ -30,6 +31,28 @@ def test_complete_case_hourly_contracts():
     )
 
 
+def test_hourly_slots_require_exact_five_minute_grid():
+    correct = pd.Series(
+        np.arange(12, dtype=float),
+        index=pd.date_range("2020-01-01T00:00:00Z", periods=12, freq="5min"),
+    )
+    assert bool(hourly_from_slots(correct, "CH-L")["ch-l_valid"].iloc[0])
+
+    missing = correct.drop(correct.index[4])
+    assert not bool(hourly_from_slots(missing, "CH-L")["ch-l_valid"].iloc[0])
+
+    duplicated = pd.concat([correct, correct.iloc[[0]]])
+    with pytest.raises(ValueError, match="duplicate 5-minute timestamps"):
+        hourly_from_slots(duplicated, "CH-L")
+
+    irregular_index = pd.DatetimeIndex(
+        [pd.Timestamp("2020-01-01T00:00:01Z") + pd.Timedelta(minutes=5 * i)
+         for i in range(12)]
+    )
+    irregular = pd.Series(np.arange(12, dtype=float), index=irregular_index)
+    assert not bool(hourly_from_slots(irregular, "CH-L")["ch-l_valid"].iloc[0])
+
+
 def test_trailing_estimator_is_prefix_invariant_and_skips_invalid_rows():
     index = pd.date_range("2019-01-01T00:00:00Z", periods=1200, freq="h")
     values = (np.arange(len(index)) % 13).astype(float)
@@ -45,6 +68,23 @@ def test_trailing_estimator_is_prefix_invariant_and_skips_invalid_rows():
     )
     assert np.array_equal(full[:900], prefix, equal_nan=True)
     assert np.isnan(full[800])
+
+
+def test_trailing_estimator_accepts_read_only_arrays_without_mutation():
+    index = pd.date_range("2019-01-01T00:00:00Z", periods=100, freq="h")
+    values = np.arange(100, dtype=float)
+    context = np.arange(100, dtype=np.int64) % 4
+    valid = np.ones(100, dtype=bool)
+    for array in (values, context, valid):
+        array.flags.writeable = False
+    observed = causal_trailing_conditional_mean(
+        values, context, index, valid,
+        min_context_count=1, min_hist=1, trailing_days=10,
+    )
+    assert len(observed) == 100
+    assert not values.flags.writeable
+    assert not context.flags.writeable
+    assert not valid.flags.writeable
 
 
 def test_verification_cut_is_mechanical():

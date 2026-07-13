@@ -22,14 +22,14 @@ def cascade_evaluation_rows(
     sizes = events.groupby("cascade_id").size()
     starts = events.groupby("cascade_id")["t_out"].min()
     t0 = int(projection["t"].iloc[0])
-    start_idx = ((starts.to_numpy() - t0) // bin_s).astype(int)
+    start_idx = ((starts.to_numpy(copy=True) - t0) // bin_s).astype(int)
     evaluation_idx = start_idx - 1
     # Regression guard: cascade-start-bin evaluation is forbidden.
     assert np.array_equal(evaluation_idx, start_idx - 1)
     in_range = (evaluation_idx >= 0) & (evaluation_idx < len(projection))
     rows = pd.DataFrame({
-        "cascade_id": sizes.index.to_numpy(),
-        "size": sizes.to_numpy(dtype=int),
+        "cascade_id": sizes.index.to_numpy(copy=True),
+        "size": sizes.to_numpy(dtype=int, copy=True),
         "start_idx": start_idx,
         "evaluation_idx": evaluation_idx,
         "in_range": in_range,
@@ -37,9 +37,11 @@ def cascade_evaluation_rows(
     rows["valid"] = False
     rows["prama_alert"] = False
     good = rows.index[in_range]
-    ei = rows.loc[good, "evaluation_idx"].to_numpy(dtype=int)
-    rows.loc[good, "valid"] = projection["valid"].to_numpy()[ei]
-    rows.loc[good, "prama_alert"] = projection["latent_collapse"].to_numpy()[ei]
+    ei = rows.loc[good, "evaluation_idx"].to_numpy(dtype=int, copy=True)
+    rows.loc[good, "valid"] = projection["valid"].to_numpy(copy=True)[ei]
+    rows.loc[good, "prama_alert"] = projection["latent_collapse"].to_numpy(
+        copy=True
+    )[ei]
     return rows
 
 
@@ -144,9 +146,9 @@ def paired_cascade_bootstrap(
 ) -> dict:
     """Paired cascade bootstrap for PRAMA minus baseline risk-difference."""
     eligible = rows[rows["in_range"] & rows["valid"]]
-    prama = eligible["prama_alert"].to_numpy(dtype=bool)
+    prama = eligible["prama_alert"].to_numpy(dtype=bool, copy=True)
     baseline = np.asarray(baseline_alert, dtype=bool)
-    severe = eligible["size"].to_numpy(dtype=int) >= size_threshold
+    severe = eligible["size"].to_numpy(dtype=int, copy=True) >= size_threshold
     if len(baseline) != len(eligible):
         raise ValueError("baseline_alert must align one-to-one with eligible cascades")
 
@@ -179,6 +181,10 @@ def paired_cascade_bootstrap(
         "p_one_sided_prama_superior": float(
             (1 + np.sum(contrasts <= 0.0)) / (n_bootstrap + 1)
         ),
+        "p_one_sided_prama_superior_semantics": (
+            "percentile bootstrap tail proportion P(bootstrap contrast <= 0) "
+            "with plus-one correction; not a centered bootstrap null test"
+        ),
         "seed": int(seed),
         "n_bootstrap": int(n_bootstrap),
         "resampling_rule": "sample cascade rows with replacement; preserve paired signals and outcome",
@@ -195,8 +201,8 @@ def severity_statistics(
         return {"n_eligible": 0, "threshold": None, "p_inside": None,
                 "p_outside": None, "enrichment": None, "alert_occupancy": 0.0}
     threshold = float(size_threshold)
-    large = eligible["size"].to_numpy() >= threshold
-    alert = eligible["prama_alert"].to_numpy(dtype=bool)
+    large = eligible["size"].to_numpy(copy=True) >= threshold
+    alert = eligible["prama_alert"].to_numpy(dtype=bool, copy=True)
     p_in = float(large[alert].mean()) if alert.any() else 0.0
     p_out = float(large[~alert].mean()) if (~alert).any() else 0.0
     return {
@@ -248,10 +254,10 @@ def occurrence_labels(events: pd.DataFrame, projection: pd.DataFrame,
                       horizons=(6, 12, 24, 48), bin_s: int = 3600) -> pd.DataFrame:
     """Define future-cascade occurrence on every eligible projection bin."""
     t0 = int(projection["t"].iloc[0])
-    starts = events.groupby("cascade_id")["t_out"].min().to_numpy()
+    starts = events.groupby("cascade_id")["t_out"].min().to_numpy(copy=True)
     start_bins = ((starts - t0) // bin_s).astype(int)
     out = pd.DataFrame({"idx": np.arange(len(projection)),
-                        "valid": projection["valid"].to_numpy(dtype=bool)})
+                        "valid": projection["valid"].to_numpy(dtype=bool, copy=True)})
     for h in horizons:
         marks = np.zeros(len(projection), dtype=int)
         for s in start_bins:

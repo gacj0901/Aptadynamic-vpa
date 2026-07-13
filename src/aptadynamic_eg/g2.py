@@ -87,8 +87,29 @@ def hourly_from_slots(slot_values: pd.Series, channel: str) -> pd.DataFrame:
     if slot_values.index.has_duplicates:
         raise ValueError("duplicate 5-minute timestamps in channel stream")
 
-    grouped = slot_values.groupby(slot_values.index.floor("h"))
+    hour_index = slot_values.index.floor("h")
+    grouped = slot_values.groupby(hour_index)
     count = grouped.count()
+    expected_minutes = frozenset(range(0, 60, 5))
+    slot_geometry = pd.DataFrame(
+        {
+            "hour": hour_index,
+            "minute": slot_values.index.minute,
+            "seconds_zero": (
+                (slot_values.index.second == 0)
+                & (slot_values.index.microsecond == 0)
+            ),
+        }
+    ).groupby("hour", sort=True).agg(
+        n_timestamps=("minute", "size"),
+        minutes=("minute", lambda values: frozenset(int(v) for v in values)),
+        seconds_zero=("seconds_zero", "all"),
+    )
+    exact_grid = (
+        slot_geometry["n_timestamps"].eq(12)
+        & slot_geometry["minutes"].eq(expected_minutes)
+        & slot_geometry["seconds_zero"]
+    )
     if channel == "CH-L":
         value = grouped.mean()
         name = "nyca_load_hourly"
@@ -97,7 +118,7 @@ def hourly_from_slots(slot_values: pd.Series, channel: str) -> pd.DataFrame:
         name = "lbmp_intrahour_std"
     else:
         raise ValueError(f"unsupported G2 source channel: {channel}")
-    valid = count.eq(12) & value.notna()
+    valid = count.eq(12) & exact_grid.reindex(count.index, fill_value=False) & value.notna()
     value = value.where(valid)
     return pd.DataFrame({name: value, f"{channel.lower()}_valid": valid})
 
@@ -173,7 +194,7 @@ def build_hourly_domain(
 
     starts = pd.to_datetime(outages["t_out"], unit="s", utc=True).dt.floor("h")
     counts = starts.value_counts().reindex(grid, fill_value=0).sort_index()
-    domain["outage_intensity"] = counts.to_numpy(dtype=float)
+    domain["outage_intensity"] = counts.to_numpy(dtype=float, copy=True)
     domain["ch-f_valid"] = True
     return domain
 
@@ -181,8 +202,8 @@ def build_hourly_domain(
 def context_codes(index: pd.DatetimeIndex, day_type: bool = True) -> np.ndarray:
     """Encode H2 context: UTC month/hour and optional New York day type."""
 
-    month = index.month.to_numpy(dtype=np.int16)
-    hour = index.hour.to_numpy(dtype=np.int16)
+    month = index.month.to_numpy(dtype=np.int16, copy=True)
+    hour = index.hour.to_numpy(dtype=np.int16, copy=True)
     code = month * 100 + hour
     if day_type:
         weekend = (index.tz_convert("America/New_York").dayofweek >= 5).astype(np.int16)
@@ -281,8 +302,8 @@ def normalize_and_project(
         cfg = G2InterfaceConfig()
     calibration = domain.index < calibration_end
     if channel == "CH-L":
-        raw = domain["nyca_load_hourly"].to_numpy(dtype=float)
-        valid = domain["ch-l_valid"].to_numpy(dtype=bool) & (raw > 0)
+        raw = domain["nyca_load_hourly"].to_numpy(dtype=float, copy=True)
+        valid = domain["ch-l_valid"].to_numpy(dtype=bool, copy=True) & (raw > 0)
         reference = float(np.median(raw[calibration & valid]))
         omega = raw / reference
         context = context_codes(domain.index, day_type=True)
@@ -297,8 +318,8 @@ def normalize_and_project(
         estimator = causal_trailing_conditional_mean
         normalization = "L(t) / median_calibration_valid_L"
     elif channel == "CH-P":
-        raw = domain["lbmp_intrahour_std"].to_numpy(dtype=float)
-        valid = domain["ch-p_valid"].to_numpy(dtype=bool)
+        raw = domain["lbmp_intrahour_std"].to_numpy(dtype=float, copy=True)
+        valid = domain["ch-p_valid"].to_numpy(dtype=bool, copy=True)
         reference = float(np.median(raw[calibration & valid]))
         omega = np.log1p(raw / reference)
         context = context_codes(domain.index, day_type=True)
@@ -313,8 +334,8 @@ def normalize_and_project(
         estimator = causal_trailing_conditional_mean
         normalization = "log1p(s(t) / median_calibration_valid_s)"
     elif channel == "CH-F":
-        raw = domain["outage_intensity"].to_numpy(dtype=float)
-        valid = domain["ch-f_valid"].to_numpy(dtype=bool)
+        raw = domain["outage_intensity"].to_numpy(dtype=float, copy=True)
+        valid = domain["ch-f_valid"].to_numpy(dtype=bool, copy=True)
         reference = 1.0
         omega = raw.copy()
         context = context_codes(domain.index, day_type=False)
@@ -332,13 +353,13 @@ def normalize_and_project(
 
     kernel_omega = np.where(valid, omega, 0.0)
     expected = np.where(valid, expected, np.nan)
-    load_cal = calibration & domain["ch-l_valid"].to_numpy(dtype=bool)
+    load_cal = calibration & domain["ch-l_valid"].to_numpy(dtype=bool, copy=True)
     q_floor = cfg.load_floor_fraction * float(
-        np.median(domain["nyca_load_hourly"].to_numpy(dtype=float)[load_cal])
+        np.median(domain["nyca_load_hourly"].to_numpy(dtype=float, copy=True)[load_cal])
     )
     sigma_op = (
-        domain["ch-l_valid"].to_numpy(dtype=bool)
-        & (domain["nyca_load_hourly"].to_numpy(dtype=float) > q_floor)
+        domain["ch-l_valid"].to_numpy(dtype=bool, copy=True)
+        & (domain["nyca_load_hourly"].to_numpy(dtype=float, copy=True) > q_floor)
         & valid
     )
     kernel_cfg = KernelConfig()

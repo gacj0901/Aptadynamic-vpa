@@ -8,13 +8,18 @@ from prama_protokol import KernelConfig, project as kernel_project
 from aptadynamic_eg.h4 import (
     GateDecision,
     baseline_signals,
+    cascade_boundary_audit,
+    cascade_boundary_table,
     common_valid_mask,
     construct_cascade_outcomes,
     holm_adjust,
+    outcome_access_record,
     partition_gates,
     rolling_ac1,
+    restrict_rows_to_cascade_partition,
     unlock_outcomes,
 )
+from aptadynamic_eg.evaluation import fit_frozen_budget_calibration
 
 
 def test_rolling_ac1_matches_direct_complete_window():
@@ -93,6 +98,70 @@ def test_common_valid_mask_is_writable_with_pandas_backed_input():
     result = common_valid_mask(source, {"x": np.array([1.0, np.nan, 2.0])})
     assert result.flags.writeable
     assert result.tolist() == [True, False, False]
+
+
+def test_frozen_budget_handles_read_only_inputs_without_mutation():
+    signal = np.arange(100, dtype=float)
+    alert = signal % 10 == 0
+    valid = np.ones(100, dtype=bool)
+    for array in (signal, alert, valid):
+        array.flags.writeable = False
+    record = fit_frozen_budget_calibration(
+        signal, alert, valid, 80, "readonly", 7
+    )
+    assert record["n_valid_calibration_bins"] == 80
+    assert not signal.flags.writeable
+    assert not alert.flags.writeable
+    assert not valid.flags.writeable
+
+
+def test_cross_boundary_cascade_belongs_to_neither_partition():
+    cut = 1_000
+    events = pd.DataFrame(
+        {
+            "cascade_id": [1, 1, 2, 2, 3],
+            "t_out": [100, 200, 900, 1_100, 2_000],
+        }
+    )
+    table = cascade_boundary_table(events, cut)
+    assert table.loc[1, "complete_calibration"]
+    assert table.loc[2, "crosses_boundary"]
+    assert table.loc[3, "evaluation"]
+
+    rows = pd.DataFrame(
+        {
+            "cascade_id": [1, 2, 3],
+            "in_range": [True, True, True],
+        }
+    )
+    calibration = restrict_rows_to_cascade_partition(
+        rows, events, cut, "calibration"
+    )
+    evaluation = restrict_rows_to_cascade_partition(
+        rows, events, cut, "evaluation"
+    )
+    assert calibration["in_range"].tolist() == [True, False, False]
+    assert evaluation["in_range"].tolist() == [False, False, True]
+
+    audit = cascade_boundary_audit(events, cut)
+    assert audit["n_total_cascades"] == 3
+    assert audit["n_complete_calibration_cascades"] == 1
+    assert audit["n_evaluation_cascades"] == 1
+    assert audit["n_cross_boundary_cascades"] == 1
+    assert audit["any_cross_boundary_in_legacy_calibration_rows"] is True
+    assert len(audit["cross_boundary_cascade_sha256"][0]) == 64
+
+
+def test_outcome_report_metadata_cannot_contradict_access_state():
+    assert outcome_access_record(False) == {
+        "outcomes_accessed": False,
+        "outcome_columns_constructed": [],
+    }
+    final = outcome_access_record(True)
+    assert final["outcomes_accessed"] is True
+    assert final["outcome_columns_constructed"] == [
+        "cascade_id", "cascade_size", "severe_cascade"
+    ]
 
 
 def test_partition_gate_rebuilds_a_consistent_density_accumulator():

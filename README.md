@@ -151,6 +151,18 @@ threshold of 3 outages:
 
 The circular alignment null returned `p = 0.179882`.
 
+The historical field `p_one_sided_prama_superior` is retained for schema
+compatibility. It is the plus-one-corrected proportion of ordinary paired
+bootstrap contrasts at or below zero (a percentile-bootstrap tail
+proportion); it is **not** a p-value from a bootstrap null distribution
+centered at zero. This terminology clarification does not recalculate or
+reclassify G2.
+
+Likewise, `program_falsification_activated: true` means that the concrete rule
+frozen in H3 section 0 was activated for the G2 hypothesis of incremental
+PRAMA value. It does not claim a universal falsification of the aptadynamic
+formalism.
+
 ## Evidence and audit trail
 
 The current result is self-contained in:
@@ -170,6 +182,10 @@ The current result is self-contained in:
   comparator table;
 - [`G2_RESULT_H5.md`](G2_RESULT_H5.md) — final classification and artifact
   hashes;
+- [`G2_IMPLEMENTATION_AUDIT.md`](G2_IMPLEMENTATION_AUDIT.md) — post-H5
+  runtime/analytical audit without an H4 rerun;
+- [`results/g2_boundary_audit_post_h5.json`](results/g2_boundary_audit_post_h5.json)
+  — safe aggregate confirming zero cascades across the frozen cut;
 - [`ANOMALIES.md`](ANOMALIES.md) — append-only implementation incident
   register.
 
@@ -204,10 +220,18 @@ See `G2_DATA_PREFLIGHT.md` for exact source patterns, coverage and the corrected
 ## Installation and verification
 
 ```powershell
-pip install -e .
+pip install -c constraints-g2.txt ..\PRAMA-Protokol\PRAMA-Protokol-py
+pip install -c constraints-g2.txt -e .
+pip install -c constraints-g2.txt pytest
 $env:PYTHONPATH='src;..\PRAMA-Protokol\PRAMA-Protokol-py\src'
 pytest -q
 ```
+
+The pins in `constraints-g2.txt` reproduce the final documented H4 runtime
+(Python 3.11, NumPy 2.4.6, Pandas 3.0.3 and `prama-protokol==0.2.1`). CI runs
+the same constraints on Python 3.11 and 3.13. Tests that need licensed local
+outage data skip explicitly when those files are absent; raw licensed data are
+never fetched or committed by CI.
 
 The committed H4 result is final. Do not rerun it merely to seek a different
 classification. Re-execution is permitted only for a demonstrated

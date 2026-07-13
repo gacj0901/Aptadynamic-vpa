@@ -4,7 +4,7 @@ The domain code builds observable outage streams. Projection is delegated to
 the universal ``prama_protokol`` kernel so kernel identity stays auditable.
 """
 
-from .ingest import automatic_only, load_bpa
+from .ingest import automatic_only, automatic_only_with_audit, load_bpa
 from .drivers import DRIVER_SPECS
 from .g2 import (
     G2InterfaceConfig,
@@ -23,6 +23,7 @@ __all__ = [
     "DRIVER_SPECS",
     "G2InterfaceConfig",
     "automatic_only",
+    "automatic_only_with_audit",
     "build_hourly_domain",
     "cascade_sizes",
     "cascades",

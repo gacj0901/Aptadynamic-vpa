@@ -1,0 +1,7 @@
+# Reproducible environment matching the documented successful H4 runtime.
+# Install the certified local PRAMA checkout before installing this project.
+numpy==2.4.6
+pandas==3.0.3
+prama-protokol==0.2.1
+pytest==9.0.3
+setuptools==80.9.0

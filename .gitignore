@@ -38,3 +38,6 @@ results/*.json
 
 # Temporary archives
 *.zip
+
+# Safe aggregate produced by scripts/audit_g2_boundary.py (no licensed rows).
+!results/g2_boundary_audit_post_h5.json

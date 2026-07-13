@@ -1,0 +1,27 @@
+{
+  "any_cross_boundary_in_legacy_calibration_rows": false,
+  "calibration_end_exclusive_utc": "2011-01-01T00:00:00+00:00",
+  "corrected_partition_rule": "calibration requires last_t_out < cut; evaluation requires first_t_out >= cut; crossing cascades belong to neither",
+  "cross_boundary_cascade_sha256": [],
+  "cut_epoch": 1293840000,
+  "cut_utc": "2011-01-01T00:00:00+00:00",
+  "n_complete_calibration_cascades": 1153,
+  "n_cross_boundary_cascades": 0,
+  "n_cross_boundary_selected_by_legacy_calibration_rule": 0,
+  "n_evaluation_cascades": 4999,
+  "n_total_cascades": 6152,
+  "outage_filter": {
+    "accepted_normalized_values": [
+      "auto",
+      "forced"
+    ],
+    "filter_applied": true,
+    "n_after": 9600,
+    "n_before": 45178,
+    "n_excluded": 35578,
+    "outage_type_column_present": true,
+    "unrecognized_value_counts": {
+      "planned": 35578
+    }
+  }
+}

@@ -97,10 +97,58 @@ def load_bpa(path: str) -> pd.DataFrame:
     return df.sort_values("t_out").reset_index(drop=True)
 
 
-def automatic_only(df: pd.DataFrame) -> pd.DataFrame:
-    """Keep automatic/forced outages when an outage-type column exists."""
+def automatic_only_with_audit(
+    df: pd.DataFrame,
+    *,
+    require_column: bool = False,
+) -> tuple[pd.DataFrame, dict]:
+    """Filter automatic/forced outages and return reproducible filter counts.
+
+    ``require_column`` is opt-in so exploratory callers retain their historical
+    behavior. Confirmatory callers must set it to fail closed when the source
+    cannot establish outage type.
+    """
 
     if "outage_type" not in df.columns:
-        return df.reset_index(drop=True)
-    mask = df["outage_type"].astype(str).str.strip().str.lower().isin(["auto", "forced"])
-    return df[mask].reset_index(drop=True)
+        if require_column:
+            raise ValueError(
+                "confirmatory automatic/forced filtering requires outage_type"
+            )
+        result = df.reset_index(drop=True)
+        return result, {
+            "outage_type_column_present": False,
+            "filter_applied": False,
+            "n_before": int(len(df)),
+            "n_after": int(len(result)),
+            "n_excluded": 0,
+            "accepted_normalized_values": ["auto", "forced"],
+            "unrecognized_value_counts": {},
+        }
+
+    normalized = df["outage_type"].astype("string").str.strip().str.lower()
+    accepted = normalized.isin(["auto", "forced"])
+    unrecognized = normalized[~accepted].fillna("<missing>").value_counts(sort=False)
+    result = df[accepted].reset_index(drop=True)
+    return result, {
+        "outage_type_column_present": True,
+        "filter_applied": True,
+        "n_before": int(len(df)),
+        "n_after": int(len(result)),
+        "n_excluded": int((~accepted).sum()),
+        "accepted_normalized_values": ["auto", "forced"],
+        "unrecognized_value_counts": {
+            str(key): int(value)
+            for key, value in sorted(unrecognized.items(), key=lambda item: str(item[0]))
+        },
+    }
+
+
+def automatic_only(
+    df: pd.DataFrame,
+    *,
+    require_column: bool = False,
+) -> pd.DataFrame:
+    """Keep automatic/forced outages, optionally requiring type evidence."""
+
+    result, _ = automatic_only_with_audit(df, require_column=require_column)
+    return result

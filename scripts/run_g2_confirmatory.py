@@ -18,7 +18,7 @@ import prama_protokol
 from prama_protokol import KernelConfig
 from prama_protokol.compliance import check_causality
 
-from aptadynamic_eg import automatic_only, load_bpa
+from aptadynamic_eg import automatic_only_with_audit, load_bpa
 from aptadynamic_eg.evaluation import (
     apply_frozen_threshold,
     cascade_evaluation_rows,
@@ -36,10 +36,14 @@ from aptadynamic_eg.g2 import (
 from aptadynamic_eg.h4 import (
     BASELINE_NAMES,
     baseline_signals,
+    cascade_boundary_audit,
+    cascade_boundary_table,
     common_valid_mask,
     construct_cascade_outcomes,
     holm_adjust,
+    outcome_access_record,
     partition_gates,
+    restrict_rows_to_cascade_partition,
     unlock_outcomes,
 )
 from aptadynamic_eg.omega import expected_profile
@@ -90,8 +94,8 @@ def actual_causality_record(
     channel: str,
     cfg: G2InterfaceConfig,
 ) -> dict:
-    values = gamma["omega"].to_numpy(dtype=float)
-    valid = gamma["sigma_valid"].to_numpy(dtype=bool)
+    values = gamma["omega"].to_numpy(dtype=float, copy=True)
+    valid = gamma["sigma_valid"].to_numpy(dtype=bool, copy=True)
     timestamps = domain.index
     day_type = channel != "CH-F"
     context = context_codes(timestamps, day_type=day_type)
@@ -120,7 +124,7 @@ def actual_causality_record(
     record = check_causality(expectation_fn, values, sample_points=8)
     expected = expectation_fn(values)
     record["matches_projected_expectation_exactly"] = bool(np.array_equal(
-        expected, gamma["expected"].to_numpy(dtype=float), equal_nan=True
+        expected, gamma["expected"].to_numpy(dtype=float, copy=True), equal_nan=True
     ))
     record["passed"] = bool(
         record["passed"] and record["matches_projected_expectation_exactly"]
@@ -148,6 +152,7 @@ def rows_for_partition(
     projection: pd.DataFrame,
     events: pd.DataFrame,
     split_idx: int,
+    cut_epoch: int,
     evaluation: bool,
 ) -> pd.DataFrame:
     rows = cascade_evaluation_rows(projection, events)
@@ -155,7 +160,12 @@ def rows_for_partition(
         rows.loc[rows["evaluation_idx"] < split_idx, "in_range"] = False
     else:
         rows.loc[rows["evaluation_idx"] >= split_idx, "in_range"] = False
-    return rows
+    return restrict_rows_to_cascade_partition(
+        rows,
+        events,
+        cut_epoch,
+        "evaluation" if evaluation else "calibration",
+    )
 
 
 def main() -> int:
@@ -181,7 +191,10 @@ def main() -> int:
 
     cfg = G2InterfaceConfig()
     kernel_cfg = KernelConfig()
-    events_filtered = automatic_only(load_bpa(args.outages))
+    loaded_events = load_bpa(args.outages)
+    events_filtered, outage_filter = automatic_only_with_audit(
+        loaded_events, require_column=True
+    )
     # Observation construction uses timestamps/validity only. No cascade or
     # severity outcome exists before the gate token below is opened.
     domain = build_hourly_domain(args.cache, events_filtered)
@@ -220,8 +233,8 @@ def main() -> int:
         sigma_record = {
             "check": "sigma_op conformance",
             "passed": bool(np.all(
-                gamma["sigma_op"].to_numpy(dtype=bool)
-                <= gamma["sigma_valid"].to_numpy(dtype=bool)
+                gamma["sigma_op"].to_numpy(dtype=bool, copy=True)
+                <= gamma["sigma_valid"].to_numpy(dtype=bool, copy=True)
             )),
             "detail": "sigma_op implies channel validity and uses frozen CH-L q_floor",
         }
@@ -265,8 +278,8 @@ def main() -> int:
     gate_payload = {
         "schema_version": 2,
         "run_mode": "confirmatory_H4_gate_stage",
-        "outcomes_accessed": False,
-        "outcome_columns_constructed": [],
+        **outcome_access_record(False),
+        "outage_filter": outage_filter,
         "order_rule": "evaluation gates completed before outcome-dependent statistics",
         "generated_at_utc": datetime.now(timezone.utc).isoformat(),
         "commits": {"grid": git_sha(root), "prama": git_sha(prama_root)},
@@ -313,44 +326,46 @@ def main() -> int:
     # The gate token is the only path into cascade/severity construction.
     events = construct_cascade_outcomes(events_filtered, decision)
     cut_epoch = int(CALIBRATION_END.timestamp())
-    grouped = events.groupby("cascade_id")
-    calibration_cascades = pd.DataFrame({
-        "size": grouped.size(), "last_t_out": grouped["t_out"].max(),
-    })
-    calibration_cascades = calibration_cascades[
-        calibration_cascades["last_t_out"] < cut_epoch
-    ]
+    boundary_audit = cascade_boundary_audit(events, cut_epoch)
+    cascade_table = cascade_boundary_table(events, cut_epoch)
+    calibration_cascades = cascade_table[cascade_table["complete_calibration"]]
     p95 = float(np.quantile(
-        calibration_cascades["size"].to_numpy(dtype=float), 0.95, method="linear"
+        calibration_cascades["size"].to_numpy(dtype=float, copy=True),
+        0.95,
+        method="linear",
     ))
     severity_threshold = int(np.ceil(p95))
 
     primary = projections["CH-L"].copy()
     signals = baseline_signals(
-        domain["outage_intensity"].to_numpy(dtype=float),
-        primary["omega"].to_numpy(dtype=float),
-        primary["expected"].to_numpy(dtype=float),
+        domain["outage_intensity"].to_numpy(dtype=float, copy=True),
+        primary["omega"].to_numpy(dtype=float, copy=True),
+        primary["expected"].to_numpy(dtype=float, copy=True),
         split_idx,
     )
     common_valid = common_valid_mask(
-        primary["valid"].to_numpy(dtype=bool), signals
+        primary["valid"].to_numpy(dtype=bool, copy=True), signals
     )
     primary["valid"] = common_valid
     primary["t"] = domain.index.as_unit("s").asi8
 
     calibrations = {
         name: fit_frozen_budget_calibration(
-            signal, primary["latent_collapse"].to_numpy(dtype=bool),
+            signal, primary["latent_collapse"].to_numpy(dtype=bool, copy=True),
             common_valid, split_idx, CALIBRATION_ID, TIE_SEED,
         )
         for name, signal in signals.items()
     }
-    calibration_rows = rows_for_partition(primary, events, split_idx, evaluation=False)
+    calibration_rows = rows_for_partition(
+        primary, events, split_idx, cut_epoch, evaluation=False
+    )
     eligible_cal = calibration_rows[
         calibration_rows["in_range"] & calibration_rows["valid"]
     ]
-    cal_idx = eligible_cal["evaluation_idx"].to_numpy(dtype=int)
-    cal_severe = eligible_cal["size"].to_numpy(dtype=int) >= severity_threshold
+    cal_idx = eligible_cal["evaluation_idx"].to_numpy(dtype=int, copy=True)
+    cal_severe = (
+        eligible_cal["size"].to_numpy(dtype=int, copy=True) >= severity_threshold
+    )
     calibration_metrics = {}
     for name in BASELINE_NAMES:
         alert = apply_frozen_threshold(signals[name], cal_idx, calibrations[name])
@@ -364,12 +379,16 @@ def main() -> int:
         ),
     )
 
-    evaluation_rows = rows_for_partition(primary, events, split_idx, evaluation=True)
+    evaluation_rows = rows_for_partition(
+        primary, events, split_idx, cut_epoch, evaluation=True
+    )
     eligible_eval = evaluation_rows[
         evaluation_rows["in_range"] & evaluation_rows["valid"]
     ]
-    eval_idx = eligible_eval["evaluation_idx"].to_numpy(dtype=int)
-    eval_severe = eligible_eval["size"].to_numpy(dtype=int) >= severity_threshold
+    eval_idx = eligible_eval["evaluation_idx"].to_numpy(dtype=int, copy=True)
+    eval_severe = (
+        eligible_eval["size"].to_numpy(dtype=int, copy=True) >= severity_threshold
+    )
     contrasts = {}
     for name in BASELINE_NAMES:
         alerts = apply_frozen_threshold(signals[name], eval_idx, calibrations[name])
@@ -388,7 +407,7 @@ def main() -> int:
     contrasts[comparator]["role"] = "primary_comparator"
 
     alignment_null = circular_shift_null(
-        primary["latent_collapse"].to_numpy(dtype=bool),
+        primary["latent_collapse"].to_numpy(dtype=bool, copy=True),
         eval_idx, eval_severe, n_permutations=ALIGNMENT_N,
         seed=ALIGNMENT_SEED, min_shift=24,
     )
@@ -410,9 +429,9 @@ def main() -> int:
 
     report = {
         **gate_payload,
+        **outcome_access_record(True),
         "run_mode": "confirmatory_H4",
         "confirmatory_eligible": True,
-        "outcomes_accessed": True,
         "outcome_access_started_after_gate_stage_file": str(gate_path),
         "working_tree_dirty_at_start": start_dirty,
         "environment": {
@@ -427,6 +446,7 @@ def main() -> int:
             "severity_p95": p95,
             "severity_threshold_ceil": severity_threshold,
         },
+        "cascade_boundary_audit": boundary_audit,
         "baseline_budget_calibrations": calibrations,
         "comparator_selection": {
             "rule": "maximum calibration severity enrichment; fixed name order breaks exact ties",
@@ -443,6 +463,11 @@ def main() -> int:
         "classification_rule": (
             "success iff selected contrast > 0 and p_one_sided < 0.01; "
             "falsification iff criterion also fails against B-TRIV"
+        ),
+        "program_falsification_scope": (
+            "activation of the concrete preregistered H3 section 0 rule for "
+            "incremental PRAMA value in G2; not universal falsification of "
+            "the aptadynamic formalism"
         ),
     }
     json_write(args.output_prefix.with_suffix(".json"), report)
